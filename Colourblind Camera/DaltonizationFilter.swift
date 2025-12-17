@@ -56,9 +56,18 @@ class DaltonizationFilter {
         
         let filter = CIFilter(name: "CIColorMatrix")
         filter?.setValue(image, forKey: kCIInputImageKey)
-        filter?.setValue(CIVector(values: matrix, count: 16), forKey: "inputRVector")
-        filter?.setValue(CIVector(values: matrix, count: 16), forKey: "inputGVector")
-        filter?.setValue(CIVector(values: matrix, count: 16), forKey: "inputBVector")
+        
+        // CIColorMatrix expects separate 4-element vectors for each color channel
+        // Each vector is [R, G, B, A] contribution to that output channel
+        let rVector = CIVector(x: matrix[0], y: matrix[1], z: matrix[2], w: matrix[3])
+        let gVector = CIVector(x: matrix[4], y: matrix[5], z: matrix[6], w: matrix[7])
+        let bVector = CIVector(x: matrix[8], y: matrix[9], z: matrix[10], w: matrix[11])
+        let aVector = CIVector(x: 0, y: 0, z: 0, w: 1)
+        
+        filter?.setValue(rVector, forKey: "inputRVector")
+        filter?.setValue(gVector, forKey: "inputGVector")
+        filter?.setValue(bVector, forKey: "inputBVector")
+        filter?.setValue(aVector, forKey: "inputAVector")
         
         return filter?.outputImage
     }

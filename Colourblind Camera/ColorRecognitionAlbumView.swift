@@ -1077,106 +1077,164 @@ class ColorAnalyzer {
     }
     
     private func getColorName(r: CGFloat, g: CGFloat, b: CGFloat) -> String {
-        let red = Int(r * 255)
-        let green = Int(g * 255)
-        let blue = Int(b * 255)
+        // Apply lighting compensation - normalize based on gray world assumption
+        let (normR, normG, normB) = normalizeForLighting(r: r, g: g, b: b)
         
-        // Convert to HSB for more accurate color naming
-        let maxC = max(red, green, blue)
-        let minC = min(red, green, blue)
-        let delta = maxC - minC
+        // Convert to HSL for better color perception
+        let (hue, saturation, lightness) = rgbToHSL(r: normR, g: normG, b: normB)
         
-        let brightness = maxC
-        let saturation = maxC == 0 ? 0 : (delta * 100) / maxC
+        let hueAngle = hue * 360
+        let sat = saturation * 100
+        let light = lightness * 100
         
-        // Calculate hue (0-360)
-        var hue: Int = 0
-        if delta != 0 {
-            if maxC == red {
-                hue = (60 * (green - blue) / delta + 360) % 360
-            } else if maxC == green {
-                hue = 60 * (blue - red) / delta + 120
-            } else {
-                hue = 60 * (red - green) / delta + 240
-            }
-        }
+        // Calculate chroma to detect true grayscale
+        let chroma = max(normR, normG, normB) - min(normR, normG, normB)
+        let isGrayscale = chroma < 0.08 || sat < 8
         
-        // Check for grayscale first (low saturation)
-        if saturation < 12 {
-            if brightness > 230 { return "White" }
-            if brightness > 180 { return "Light Gray" }
-            if brightness > 100 { return "Gray" }
-            if brightness > 50 { return "Dark Gray" }
+        // Handle grayscale/neutral colors
+        if isGrayscale {
+            if light > 85 { return "White" }
+            if light > 65 { return "Light Gray" }
+            if light > 35 { return "Gray" }
+            if light > 15 { return "Dark Gray" }
             return "Black"
         }
         
-        // Check for very dark colors
-        if brightness < 30 {
+        // Handle very dark colors
+        if light < 12 && sat < 20 {
             return "Black"
         }
         
-        // Check for very light/pale colors
-        if brightness > 220 && saturation < 25 {
-            return "White"
-        }
-        
-        // Determine color based on hue
-        // Using HSB color wheel: Red=0, Yellow=60, Green=120, Cyan=180, Blue=240, Magenta=300
-        
-        let isLight = brightness > 180
-        let isDark = brightness < 80
-        let isPale = saturation < 35
+        // Classify by lightness and saturation
+        let isVeryLight = light > 75
+        let isLight = light > 55
+        let isDark = light < 30
+        let isVeryDark = light < 18
+        let isPale = sat < 30
+        let isVivid = sat > 70
         
         var colorName: String
         
-        if hue < 15 || hue >= 345 {
-            // Red range
-            if isPale && isLight { colorName = "Pink" }
-            else if isDark { colorName = "Dark Red" }
-            else if red > 180 && green > 100 && green < 180 && blue < 100 { colorName = "Orange" }
+        // Red range
+        if hueAngle < 12 || hueAngle >= 350 {
+            if isVeryLight && isPale { colorName = "Pink" }
+            else if isVeryDark { colorName = "Dark Red" }
+            else if isDark && sat < 50 { colorName = "Maroon" }
+            else if isPale && isLight { colorName = "Salmon" }
             else { colorName = "Red" }
-        } else if hue < 45 {
-            // Orange range
-            if isDark { colorName = "Brown" }
-            else if isPale { colorName = "Peach" }
+        }
+        // Orange range
+        else if hueAngle < 40 {
+            if isVeryDark || (isDark && sat < 50) { colorName = "Brown" }
+            else if isVeryLight && isPale { colorName = "Peach" }
+            else if isPale { colorName = "Tan" }
             else { colorName = "Orange" }
-        } else if hue < 70 {
-            // Yellow-Orange range
-            if isDark { colorName = "Brown" }
-            else if brightness < 150 { colorName = "Olive" }
+        }
+        // Yellow range
+        else if hueAngle < 70 {
+            if isVeryDark { colorName = "Olive" }
+            else if isDark { colorName = "Brown" }
+            else if isPale && isLight { colorName = "Cream" }
+            else if isPale { colorName = "Beige" }
             else { colorName = "Yellow" }
-        } else if hue < 150 {
-            // Green range
-            if isPale && isLight { colorName = "Light Green" }
-            else if isDark { colorName = "Dark Green" }
-            else if hue > 140 { colorName = "Teal" }
+        }
+        // Green range
+        else if hueAngle < 150 {
+            if isVeryLight && isPale { colorName = "Mint" }
+            else if isVeryLight { colorName = "Light Green" }
+            else if isVeryDark { colorName = "Dark Green" }
+            else if isDark { colorName = "Forest Green" }
+            else if isPale { colorName = "Sage" }
+            else if isVivid { colorName = "Bright Green" }
             else { colorName = "Green" }
-        } else if hue < 190 {
-            // Cyan range
-            if isPale { colorName = "Light Blue" }
+        }
+        // Cyan range
+        else if hueAngle < 195 {
+            if isLight { colorName = "Aqua" }
+            else if isDark { colorName = "Teal" }
             else { colorName = "Cyan" }
-        } else if hue < 260 {
-            // Blue range
-            if isPale && isLight { colorName = "Light Blue" }
-            else if isDark { colorName = "Navy" }
+        }
+        // Blue range
+        else if hueAngle < 255 {
+            if isVeryLight && isPale { colorName = "Powder Blue" }
+            else if isVeryLight { colorName = "Sky Blue" }
+            else if isVeryDark { colorName = "Navy" }
+            else if isDark { colorName = "Dark Blue" }
+            else if isVivid { colorName = "Bright Blue" }
             else { colorName = "Blue" }
-        } else if hue < 290 {
-            // Purple range
-            if isPale { colorName = "Lavender" }
-            else if isDark { colorName = "Dark Purple" }
+        }
+        // Purple range
+        else if hueAngle < 310 {
+            if isVeryLight && isPale { colorName = "Lavender" }
+            else if isVeryLight { colorName = "Light Purple" }
+            else if isVeryDark { colorName = "Dark Purple" }
+            else if isPale { colorName = "Mauve" }
             else { colorName = "Purple" }
-        } else if hue < 330 {
-            // Magenta/Pink range
-            if isPale && isLight { colorName = "Pink" }
-            else if isDark { colorName = "Maroon" }
-            else { colorName = "Magenta" }
-        } else {
-            // Back to red range
-            if isPale && isLight { colorName = "Pink" }
-            else { colorName = "Red" }
+        }
+        // Magenta/Pink range
+        else {
+            if isVeryLight { colorName = "Pink" }
+            else if isDark { colorName = "Magenta" }
+            else if isPale { colorName = "Rose" }
+            else { colorName = "Hot Pink" }
         }
         
         return colorName
+    }
+    
+    // Normalize RGB values to compensate for lighting conditions
+    private func normalizeForLighting(r: CGFloat, g: CGFloat, b: CGFloat) -> (CGFloat, CGFloat, CGFloat) {
+        let luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        
+        if luminance < 0.01 {
+            return (r, g, b)
+        }
+        
+        let avgColor = (r + g + b) / 3.0
+        
+        if avgColor > 0.05 {
+            let scaleR = avgColor / max(r, 0.01)
+            let scaleG = avgColor / max(g, 0.01)
+            let scaleB = avgColor / max(b, 0.01)
+            
+            let blendFactor: CGFloat = 0.4
+            let normR = min(1.0, r * (1 + (scaleR - 1) * blendFactor))
+            let normG = min(1.0, g * (1 + (scaleG - 1) * blendFactor))
+            let normB = min(1.0, b * (1 + (scaleB - 1) * blendFactor))
+            
+            return (normR, normG, normB)
+        }
+        
+        return (r, g, b)
+    }
+    
+    // Convert RGB to HSL
+    private func rgbToHSL(r: CGFloat, g: CGFloat, b: CGFloat) -> (h: CGFloat, s: CGFloat, l: CGFloat) {
+        let maxC = max(r, g, b)
+        let minC = min(r, g, b)
+        let delta = maxC - minC
+        
+        let l = (maxC + minC) / 2.0
+        
+        var s: CGFloat = 0
+        if delta > 0 {
+            s = delta / (1 - abs(2 * l - 1))
+        }
+        
+        var h: CGFloat = 0
+        if delta > 0 {
+            if maxC == r {
+                h = ((g - b) / delta).truncatingRemainder(dividingBy: 6)
+            } else if maxC == g {
+                h = (b - r) / delta + 2
+            } else {
+                h = (r - g) / delta + 4
+            }
+            h /= 6
+            if h < 0 { h += 1 }
+        }
+        
+        return (h, min(1, max(0, s)), l)
     }
     
     private func generateTags(from colors: [ColorInfo]) -> [String] {

@@ -6,6 +6,7 @@ struct LiveColorView: View {
     @State private var selectedFilter = "Normal"
     @State private var showFilterSettings = false
     @State private var showColorText = true
+    @State private var cameraPermissionDenied = false
     private let speechSynthesizer = AVSpeechSynthesizer()
     
     let filterOptions = [
@@ -19,9 +20,44 @@ struct LiveColorView: View {
         NavigationView {
             ZStack {
                 // Camera preview
-                if let session = cameraService.session {
-                    CameraPreview(session: session)
+                if cameraService.session != nil {
+                    CameraPreview(session: cameraService.session!)
                         .edgesIgnoringSafeArea(.all)
+                } else if cameraPermissionDenied {
+                    // Show permission denied message
+                    VStack(spacing: 20) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        Text("Camera Access Required")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Please enable camera access in Settings to use this feature.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        Button("Open Settings") {
+                            if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(settingsUrl)
+                            }
+                        }
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    .padding()
+                } else {
+                    // Loading state
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Starting Camera...")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 10)
+                    }
                 }
                 
                 // Color Filter Overlay
@@ -101,6 +137,32 @@ struct LiveColorView: View {
             .sheet(isPresented: $showFilterSettings) {
                 FilterSettingsView(selectedFilter: $selectedFilter)
             }
+            .onAppear {
+                startCamera()
+            }
+        }
+    }
+    
+    private func startCamera() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            cameraService.checkPermissions()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        cameraService.checkPermissions()
+                    } else {
+                        cameraPermissionDenied = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            DispatchQueue.main.async {
+                cameraPermissionDenied = true
+            }
+        @unknown default:
+            break
         }
     }
 }

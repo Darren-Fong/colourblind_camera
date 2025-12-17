@@ -155,7 +155,7 @@ class GraphLineDetector {
             
             var shapeIndex = 0
             
-            for (colorName, colorLines) in groupedLines.sorted(by: { $0.key < $1.key }) {
+            for (_, colorLines) in groupedLines.sorted(by: { $0.key < $1.key }) {
                 let shape = shapeStyles[shapeIndex % shapeStyles.count]
                 
                 for line in colorLines {
