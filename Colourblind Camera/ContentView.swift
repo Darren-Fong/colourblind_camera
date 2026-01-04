@@ -40,6 +40,15 @@ struct MoreFeaturesView: View {
         NavigationView {
             ScrollView {
                 LazyVStack(spacing: 20) {
+                    // Object Recognition
+                    FeatureCard(
+                        title: "Object Recognition",
+                        description: "Identify objects using AI-powered image recognition",
+                        icon: "viewfinder.circle.fill",
+                        color: .purple,
+                        destination: AnyView(ImageDetector())
+                    )
+                    
                     // Color Learning
                     FeatureCard(
                         title: "Color Learning",
