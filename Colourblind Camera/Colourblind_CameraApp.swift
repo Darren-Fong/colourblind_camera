@@ -11,7 +11,7 @@ import SwiftUI
 struct Colourblind_CameraApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
         }
     }
 }

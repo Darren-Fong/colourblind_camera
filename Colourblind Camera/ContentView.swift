@@ -1,33 +1,32 @@
 //
-//  ContentView.swift
+//  MainTabView.swift
 //  Colourblind Camera
+//
+//  Clean, optimized main interface
 //
 
 import SwiftUI
 
-struct ContentView: View {
+struct MainTabView: View {
     @State private var selectedTab = 0
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Live Camera Tab
-            LiveColorView()
+            LiveCameraView()
                 .tabItem {
                     Label("Live", systemImage: "camera.viewfinder")
                 }
                 .tag(0)
             
-            // Color Album Tab
-            ColorRecognitionAlbumView()
+            AlbumView()
                 .tabItem {
                     Label("Album", systemImage: "photo.stack")
                 }
                 .tag(1)
             
-            // More Features Tab
-            MoreFeaturesView()
+            SettingsView()
                 .tabItem {
-                    Label("More", systemImage: "ellipsis.circle")
+                    Label("Settings", systemImage: "gear")
                 }
                 .tag(2)
         }
@@ -40,15 +39,6 @@ struct MoreFeaturesView: View {
         NavigationView {
             ScrollView {
                 LazyVStack(spacing: 20) {
-                    // Object Recognition
-                    FeatureCard(
-                        title: "Object Recognition",
-                        description: "Identify objects using AI-powered image recognition",
-                        icon: "viewfinder.circle.fill",
-                        color: .purple,
-                        destination: AnyView(ImageDetector())
-                    )
-                    
                     // Color Learning
                     FeatureCard(
                         title: "Color Learning",
@@ -147,92 +137,6 @@ struct FeatureCard: View {
         }
     }
 }
-
-// Settings View
-struct SettingsView: View {
-    @ObservedObject private var settings = AppSettings.shared
-    @State private var showResetAlert = false
-    @State private var showClearDataAlert = false
-    
-    var body: some View {
-        Form {
-            Section(header: Text("Color Vision")) {
-                Picker("Color Blindness Type", selection: $settings.colorBlindnessType) {
-                    Text("Normal Vision").tag(ColorBlindnessType.normal)
-                    Text("Protanopia (Red-blind)").tag(ColorBlindnessType.protanopia)
-                    Text("Deuteranopia (Green-blind)").tag(ColorBlindnessType.deuteranopia)
-                    Text("Tritanopia (Blue-blind)").tag(ColorBlindnessType.tritanopia)
-                }
-                .pickerStyle(.navigationLink)
-                
-                Toggle("Color Correction", isOn: $settings.colorCorrection)
-                Toggle("Enhanced Contrast", isOn: $settings.enhancedContrast)
-            }
-            
-            Section(header: Text("Appearance")) {
-                Toggle("Large Text", isOn: $settings.largeText)
-                Toggle("High Contrast", isOn: $settings.highContrast)
-            }
-            
-            Section(header: Text("Accessibility")) {
-                Toggle("Voice Announcements", isOn: $settings.voiceAnnouncements)
-                Toggle("Haptic Feedback", isOn: $settings.hapticFeedback)
-            }
-            
-            Section(header: Text("Camera")) {
-                Toggle("Auto White Balance", isOn: $settings.autoWhiteBalance)
-                Toggle("Advanced Color Recognition", isOn: $settings.advancedColorRecognition)
-            }
-            
-            Section(header: Text("Privacy")) {
-                Toggle("Analytics", isOn: $settings.analytics)
-                
-                Button(action: {
-                    showClearDataAlert = true
-                }) {
-                    HStack {
-                        Text("Clear Data")
-                        Spacer()
-                    }
-                }
-                .foregroundColor(.red)
-            }
-            
-            Section {
-                Button(action: {
-                    showResetAlert = true
-                }) {
-                    HStack {
-                        Spacer()
-                        Text("Reset All Settings")
-                        Spacer()
-                    }
-                }
-                .foregroundColor(.orange)
-            }
-        }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.large)
-        .alert("Reset All Settings", isPresented: $showResetAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Reset", role: .destructive) {
-                settings.resetToDefaults()
-            }
-        } message: {
-            Text("This will reset all settings to their default values. This action cannot be undone.")
-        }
-        .alert("Clear Data", isPresented: $showClearDataAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Clear", role: .destructive) {
-                settings.clearAllData()
-            }
-        } message: {
-            Text("This will delete all saved photos from the album. This action cannot be undone.")
-        }
-    }
-}
-
-
 
 struct AboutView: View {
     var body: some View {

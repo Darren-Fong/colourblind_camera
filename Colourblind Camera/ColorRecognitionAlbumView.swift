@@ -1078,7 +1078,8 @@ class ColorAnalyzer {
     
     private func getColorName(r: CGFloat, g: CGFloat, b: CGFloat) -> String {
         // Use the same advanced color recognizer as the live camera
-        return ColorRecognizer.shared.recognizeColor(r: Double(r), g: Double(g), b: Double(b))
+        let recognizer = ColorRecognizer()
+        return recognizer.recognize(r: Double(r), g: Double(g), b: Double(b))
         
         // Old implementation below (kept for reference but not used)
         /*

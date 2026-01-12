@@ -340,7 +340,7 @@ class CameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, Obs
     
     var delegate: AVCapturePhotoCaptureDelegate?
     private let output = AVCapturePhotoOutput()
-    private let previewLayer = AVCaptureVideoPreviewLayer()
+    let previewLayer = AVCaptureVideoPreviewLayer()
     private let videoOutput = AVCaptureVideoDataOutput()
     private let processingQueue = DispatchQueue(label: "com.colourblind.processing", qos: .userInitiated)
     
@@ -458,8 +458,14 @@ class CameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, Obs
             
             // Set video orientation
             if let connection = videoOutput.connection(with: .video) {
-                if connection.isVideoOrientationSupported {
-                    connection.videoOrientation = .portrait
+                if #available(iOS 17.0, *) {
+                    if connection.isVideoRotationAngleSupported(0) {
+                        connection.videoRotationAngle = 0
+                    }
+                } else {
+                    if connection.isVideoOrientationSupported {
+                        connection.videoOrientation = .portrait
+                    }
                 }
             }
             
@@ -593,7 +599,8 @@ class CameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, Obs
         let g = gTotal / Double(count) / 255.0
         let b = bTotal / Double(count) / 255.0
         
-        let colorName = ColorRecognizer.shared.recognizeColor(r: r, g: g, b: b)
+        let recognizer = ColorRecognizer()
+        let colorName = recognizer.recognize(r: r, g: g, b: b)
         
         DispatchQueue.main.async {
             self.dominantColor = colorName
@@ -641,7 +648,8 @@ class CameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, Obs
         let g = Double(bitmap[1]) / 255.0
         let b = Double(bitmap[2]) / 255.0
         
-        let colorName = ColorRecognizer.shared.recognizeColor(r: r, g: g, b: b)
+        let recognizer = ColorRecognizer()
+        let colorName = recognizer.recognize(r: r, g: g, b: b)
         
         DispatchQueue.main.async {
             self.dominantColor = colorName
@@ -688,9 +696,9 @@ class CameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, Obs
     }
 }
 
-// MARK: - Advanced Color Recognizer with Temporal Smoothing
-class ColorRecognizer {
-    static let shared = ColorRecognizer()
+// MARK: - Old ColorRecognizer (Legacy)
+class LegacyColorRecognizer {
+    static let shared = LegacyColorRecognizer()
     
     // Temporal smoothing for stable color detection
     private var colorHistory: [String] = []
@@ -906,8 +914,6 @@ class ColorRecognizer {
         let veryVivid = s > 88
         
         // Use hue for basic color determination with refined ranges
-        var baseColor = ""
-        
         // RED (345-360, 0-15)
         if h >= 345 || h < 15 {
             if veryLight && veryPale { return "Pale Pink" }

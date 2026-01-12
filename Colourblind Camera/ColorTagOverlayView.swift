@@ -17,7 +17,7 @@ struct ColorTagOverlayView: View {
     @State private var showLabels = true
     @State private var detectionSensitivity: Float = 0.5
     
-    let cameraService: CameraService
+    let cameraService: CameraManager
     
     var body: some View {
         ZStack {
@@ -144,11 +144,11 @@ struct ColorRegion {
 
 class ColorRegionDetector: ObservableObject {
     @Published var colorRegions: [ColorRegion] = []
-    private var cameraService: CameraService?
+    private var cameraService: CameraManager?
     private var detectionTimer: Timer?
     private var sensitivity: Float = 0.5
     
-    func startDetection(with cameraService: CameraService) {
+    func startDetection(with cameraService: CameraManager) {
         self.cameraService = cameraService
         detectionTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
             self.detectColorRegions()

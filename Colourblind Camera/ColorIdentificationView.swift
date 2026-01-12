@@ -19,7 +19,7 @@ struct ColorIdentificationView: View {
         ZStack {
             // Camera preview
             if let session = cameraService.session {
-                CameraPreview(session: session)
+                ColorIdentificationCameraPreview(session: session)
                     .edgesIgnoringSafeArea(.all)
             }
             
@@ -218,7 +218,7 @@ struct ColorInfoView: View {
     }
 }
 
-struct CameraPreview: UIViewRepresentable {
+struct ColorIdentificationCameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     
     func makeUIView(context: Context) -> UIView {

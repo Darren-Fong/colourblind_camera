@@ -2,7 +2,7 @@ import SwiftUI
 import AVFoundation
 
 struct LiveColorView: View {
-    @StateObject private var cameraService = CameraService()
+    @StateObject private var cameraService = CameraManager()
     @ObservedObject private var settings = AppSettings.shared
     @State private var showFilterSettings = false
     @State private var showColorText = true
@@ -30,8 +30,8 @@ struct LiveColorView: View {
         NavigationView {
             ZStack {
                 // Camera preview
-                if cameraService.session != nil {
-                    CameraPreview(session: cameraService.session!)
+                if cameraService.isRunning {
+                    CameraPreview(cameraManager: cameraService)
                         .edgesIgnoringSafeArea(.all)
                 } else if cameraPermissionDenied {
                     // Show permission denied message
@@ -99,7 +99,7 @@ struct LiveColorView: View {
                         Button(action: {
                             withAnimation {
                                 showObjectRecognition.toggle()
-                                cameraService.isObjectRecognitionEnabled = showObjectRecognition
+                                cameraService.enableObjectDetection = showObjectRecognition
                             }
                         }) {
                             Image(systemName: showObjectRecognition ? "viewfinder.circle.fill" : "viewfinder.circle")
@@ -137,14 +137,14 @@ struct LiveColorView: View {
                         // Vision/Algorithm Toggle
                         Button(action: {
                             withAnimation {
-                                cameraService.useVisionColorDetection.toggle()
+                                cameraService.useVisionForColor.toggle()
                             }
                         }) {
-                            Image(systemName: cameraService.useVisionColorDetection ? "cpu.fill" : "function")
+                            Image(systemName: cameraService.useVisionForColor ? "cpu.fill" : "function")
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
                                 .background(Color.black.opacity(0.6))
-                                .foregroundColor(cameraService.useVisionColorDetection ? .blue : .purple)
+                                .foregroundColor(cameraService.useVisionForColor ? .blue : .purple)
                                 .cornerRadius(20)
                         }
                     }
@@ -164,15 +164,15 @@ struct LiveColorView: View {
                                     
                                     // Mode indicator
                                     HStack(spacing: 4) {
-                                        Image(systemName: cameraService.useVisionColorDetection ? "cpu" : "function")
-                                            .font(.caption2)
-                                        Text(cameraService.useVisionColorDetection ? "Vision" : "Algorithm")
+                                        Image(systemName: cameraService.useVisionForColor ? "cpu" : "function")
+                                            .font(.caption)
+                                        Text(cameraService.useVisionForColor ? "Vision" : "Algorithm")
                                             .font(.caption2)
                                     }
                                     .foregroundColor(.white.opacity(0.6))
                                 }
                                 
-                                Text(cameraService.dominantColor)
+                                Text(cameraService.detectedColor)
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 20)
@@ -184,7 +184,7 @@ struct LiveColorView: View {
                         }
                         
                         // Object Recognition Display
-                        if showObjectRecognition && !cameraService.recognizedObject.isEmpty {
+                        if showObjectRecognition && !cameraService.detectedObject.isEmpty {
                             VStack(spacing: 8) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "sparkles")
@@ -194,7 +194,7 @@ struct LiveColorView: View {
                                 }
                                 .foregroundColor(.white.opacity(0.8))
                                 
-                                Text(cameraService.recognizedObject)
+                                Text(cameraService.detectedObject)
                                     .font(.system(size: 24, weight: .semibold))
                                     .foregroundColor(.white)
                                     .multilineTextAlignment(.center)
@@ -241,12 +241,12 @@ struct LiveColorView: View {
     private func startCamera() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            cameraService.checkPermissions()
+            cameraService.startSession()
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
                     if granted {
-                        cameraService.checkPermissions()
+                        cameraService.startSession()
                     } else {
                         cameraPermissionDenied = true
                     }
